@@ -27,6 +27,7 @@
 #include "BRSet.h"
 #include "BRArray.h"
 #include "BRInt.h"
+#include "BRMerkleBlock.h"
 #include <stdlib.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -49,22 +50,13 @@
 #if BITCOIN_TESTNET
 
 static const struct { uint32_t height; const char *hash; uint32_t timestamp; uint32_t target; } checkpoint_array[] = {
-    {      0, "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943", 1296688602, 0x1d00ffff },
-    {  20160, "000000001cf5440e7c9ae69f655759b17a32aad141896defd55bb895b7cfc44e", 1345001466, 0x1c4d1756 },
-    {  40320, "000000008011f56b8c92ff27fb502df5723171c5374673670ef0eee3696aee6d", 1355980158, 0x1d00ffff },
-    {  60480, "00000000130f90cda6a43048a58788c0a5c75fa3c32d38f788458eb8f6952cee", 1363746033, 0x1c1eca8a },
-    {  80640, "00000000002d0a8b51a9c028918db3068f976e3373d586f08201a4449619731c", 1369042673, 0x1c011c48 },
-    { 100800, "0000000000a33112f86f3f7b0aa590cb4949b84c2d9c673e9e303257b3be9000", 1376543922, 0x1c00d907 },
-    { 120960, "00000000003367e56e7f08fdd13b85bbb31c5bace2f8ca2b0000904d84960d0c", 1382025703, 0x1c00df4c },
-    { 141120, "0000000007da2f551c3acd00e34cc389a4c6b6b3fad0e4e67907ad4c7ed6ab9f", 1384495076, 0x1c0ffff0 },
-    { 161280, "0000000001d1b79a1aec5702aaa39bad593980dfe26799697085206ef9513486", 1388980370, 0x1c03fffc },
-    { 181440, "00000000002bb4563a0ec21dc4136b37dcd1b9d577a75a695c8dd0b861e1307e", 1392304311, 0x1b336ce6 },
-    { 201600, "0000000000376bb71314321c45de3015fe958543afcbada242a3b1b072498e38", 1393813869, 0x1b602ac0 }
+        {      3001, "000000a2454b325d2e09b202359cf0c0c20a44575ac8e2943edafec4b721219f", 1462856651, 0x1e014320 }
 };
 
 static const char *dns_seeds[] = {
-    "testnet-seed.breadwallet.com.", "testnet-seed.bitcoin.petertodd.org.", "testnet-seed.bluematt.me.",
-    "testnet-seed.bitcoin.schildbach.de."
+        "192.168.1.2",
+        "testnet-seed.dashdot.io",
+        "test.dnsseed.masternode.io",
 };
 
 #else // main net
@@ -72,34 +64,33 @@ static const char *dns_seeds[] = {
 // blockchain checkpoints - these are also used as starting points for partial chain downloads, so they need to be at
 // difficulty transition boundaries in order to verify the block difficulty at the immediately following transition
 static const struct { uint32_t height; const char *hash; uint32_t timestamp; uint32_t target; } checkpoint_array[] = {
-    {      0, "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f", 1231006505, 0x1d00ffff },
-    {  20160, "000000000f1aef56190aee63d33a373e6487132d522ff4cd98ccfc96566d461e", 1248481816, 0x1d00ffff },
-    {  40320, "0000000045861e169b5a961b7034f8de9e98022e7a39100dde3ae3ea240d7245", 1266191579, 0x1c654657 },
-    {  60480, "000000000632e22ce73ed38f46d5b408ff1cff2cc9e10daaf437dfd655153837", 1276298786, 0x1c0eba64 },
-    {  80640, "0000000000307c80b87edf9f6a0697e2f01db67e518c8a4d6065d1d859a3a659", 1284861847, 0x1b4766ed },
-    { 100800, "000000000000e383d43cc471c64a9a4a46794026989ef4ff9611d5acb704e47a", 1294031411, 0x1b0404cb },
-    { 120960, "0000000000002c920cf7e4406b969ae9c807b5c4f271f490ca3de1b0770836fc", 1304131980, 0x1b0098fa },
-    { 141120, "00000000000002d214e1af085eda0a780a8446698ab5c0128b6392e189886114", 1313451894, 0x1a094a86 },
-    { 161280, "00000000000005911fe26209de7ff510a8306475b75ceffd434b68dc31943b99", 1326047176, 0x1a0d69d7 },
-    { 181440, "00000000000000e527fc19df0992d58c12b98ef5a17544696bbba67812ef0e64", 1337883029, 0x1a0a8b5f },
-    { 201600, "00000000000003a5e28bef30ad31f1f9be706e91ae9dda54179a95c9f9cd9ad0", 1349226660, 0x1a057e08 },
-    { 221760, "00000000000000fc85dd77ea5ed6020f9e333589392560b40908d3264bd1f401", 1361148470, 0x1a04985c },
-    { 241920, "00000000000000b79f259ad14635739aaf0cc48875874b6aeecc7308267b50fa", 1371418654, 0x1a00de15 },
-    { 262080, "000000000000000aa77be1c33deac6b8d3b7b0757d02ce72fffddc768235d0e2", 1381070552, 0x1916b0ca },
-    { 282240, "0000000000000000ef9ee7529607286669763763e0c46acfdefd8a2306de5ca8", 1390570126, 0x1901f52c },
-    { 302400, "0000000000000000472132c4daaf358acaf461ff1c3e96577a74e5ebf91bb170", 1400928750, 0x18692842 },
-    { 322560, "000000000000000002df2dd9d4fe0578392e519610e341dd09025469f101cfa1", 1411680080, 0x181fb893 },
-    { 342720, "00000000000000000f9cfece8494800d3dcbf9583232825da640c8703bcd27e7", 1423496415, 0x1818bb87 },
-    { 362880, "000000000000000014898b8e6538392702ffb9450f904c80ebf9d82b519a77d5", 1435475246, 0x1816418e },
-    { 383040, "00000000000000000a974fa1a3f84055ad5ef0b2f96328bc96310ce83da801c9", 1447236692, 0x1810b289 },
-    { 403200, "000000000000000000c4272a5c68b4f55e5af734e88ceab09abf73e9ac3b6d01", 1458292068, 0x1806a4c3 },
-    { 423360, "000000000000000001630546cde8482cc183708f076a5e4d6f51cd24518e8f85", 1470163842, 0x18057228 },
-    { 443520, "00000000000000000345d0c7890b2c81ab5139c6e83400e5bed00d23a1f8d239", 1481765313, 0x18038b85 }
+    {      0, "00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6", 1390095618, 0x1e0ffff0u },//dash
+    {   1500, "000000aaf0300f59f49bc3e970bad15c11f961fe2347accffff19d96ec9778e3", 1390109863, 0x1e00ffffu },//dash
+    {   4991, "000000003b01809551952460744d5dbb8fcbd6cbae3c220267bf7fa43f837367", 1390271049, 0x1c426980u },//dash
+    {   9918, "00000000213e229f332c0ffbe34defdaa9e74de87f2d8d1f01af8d121c3c170b", 1391392449, 0x1c41cc20u },//dash
+    {  16912, "00000000075c0d10371d55a60634da70f197548dbbfa4123e12abfcbc5738af9", 1392328997, 0x1c07cc3bu },//dash
+    {  23912, "0000000000335eac6703f3b1732ec8b2f89c3ba3a7889e5767b090556bb9a276", 1393373461, 0x1c0177efu },//dash
+    {  35457, "0000000000b0ae211be59b048df14820475ad0dd53b9ff83b010f71a77342d9f", 1395110315, 0x1c00da53u },//dash
+    {  45479, "000000000063d411655d590590e16960f15ceea4257122ac430c6fbe39fbf02d", 1396620889, 0x1c009c80u },//dash
+    {  55895, "0000000000ae4c53a43639a4ca027282f69da9c67ba951768a20415b6439a2d7", 1398190161, 0x1c00bae3u },//dash
+    {  68899, "0000000000194ab4d3d9eeb1f2f792f21bb39ff767cb547fe977640f969d77b7", 1400148293, 0x1b25df16u },//dash
+    {  74619, "000000000011d28f38f05d01650a502cc3f4d0e793fbc26e2a2ca71f07dc3842", 1401048723, 0x1b1905e3u },//dash
+    {  75095, "0000000000193d12f6ad352a9996ee58ef8bdc4946818a5fec5ce99c11b87f0d", 1401126238, 0x1b2587e3u },//dash
+    {  88805, "00000000001392f1652e9bf45cd8bc79dc60fe935277cd11538565b4a94fa85f", 1403283082, 0x1b194dfbu },//dash
+    { 107996, "00000000000a23840ac16115407488267aa3da2b9bc843e301185b7d17e4dc40", 1406300692, 0x1b11c217u },//dash
+    { 137993, "00000000000cf69ce152b1bffdeddc59188d7a80879210d6e5c9503011929c3c", 1411014812, 0x1b1142abu },//dash
+    { 167996, "000000000009486020a80f7f2cc065342b0c2fb59af5e090cd813dba68ab0fed", 1415730882, 0x1b112d94u },//dash
+    { 207992, "00000000000d85c22be098f74576ef00b7aa00c05777e966aff68a270f1e01a5", 1422026638, 0x1b113c01u },//dash
+    { 217752, "00000000000a7baeb2148272a7e14edf5af99a64af456c0afc23d15a0918b704", 1423563332, 0x1b10c9b6u },//dash
+    { 227121, "00000000000455a2b3a2ed5dfb03990043ca0074568b939acec62820e89a6c45", 1425039295, 0x1b1261d6u },//dash
+    { 246209, "00000000000eec6f7871d3d70321ae98ef1007ab0812d876bda1208afcfb7d7d", 1428046505, 0x1b1a5e27u },//dash
+    { 298549, "00000000000cc467fbfcfd49b82e4f9dc8afb0ef83be7c638f573be6a852ba56", 1436306353, 0x1b1ff0dbu },//dash
+    { 312645, "0000000000059dcb71ad35a9e40526c44e7aae6c99169a9e7017b7d84b1c2daf", 1438525019, 0x1b1c46ceu }//dash
 };
 
 static const char *dns_seeds[] = {
-    "seed.breadwallet.com.", "seed.bitcoin.sipa.be.", "dnsseed.bluematt.me.", "dnsseed.bitcoin.dashjr.org.",
-    "seed.bitcoinstats.com.", "bitseed.xf2.org.", "seed.bitcoin.jonasschnelli.ch."
+           "dnsseed.masternode.io",             "dnsseed.dashpay.io",
+            "dnsseed.dash.org",            "dnsseed.dashdot.io"
 };
 
 #endif
@@ -1141,24 +1132,28 @@ static void _peerRejectedTx(void *info, UInt256 txHash, uint8_t code)
     if (manager->txStatusUpdate) manager->txStatusUpdate(manager->info);
 }
 
+uint32_t darkGravityWaveTargetWithPreviousBlocks(BRMerkleBlock * self, BRMerkleBlock *_previousBlock, BRPeerManager * manager, int* enough);
+
+
 static int _BRPeerManagerVerifyBlock(BRPeerManager *manager, BRMerkleBlock *block, BRMerkleBlock *prev, BRPeer *peer)
 {
     uint32_t transitionTime = 0;
     int r = 1;
+    int enough = 0;
     
     // check if we hit a difficulty transition, and find previous transition time
     if ((block->height % BLOCK_DIFFICULTY_INTERVAL) == 0) {
         BRMerkleBlock *b = block;
         UInt256 prevBlock;
 
-        for (uint32_t i = 0; b && i < BLOCK_DIFFICULTY_INTERVAL; i++) {
+        /*for (uint32_t i = 0; b && i < BLOCK_DIFFICULTY_INTERVAL; i++) {
             b = BRSetGet(manager->blocks, &b->prevBlock);
         }
 
         if (b) {
             transitionTime = b->timestamp;
             prevBlock = b->prevBlock;
-        }
+        }*/
         
         while (b) { // free up some memory
             b = BRSetGet(manager->blocks, &prevBlock);
@@ -1171,8 +1166,15 @@ static int _BRPeerManagerVerifyBlock(BRPeerManager *manager, BRMerkleBlock *bloc
         }
     }
 
+    uint32_t dgwDiff = darkGravityWaveTargetWithPreviousBlocks(block, prev, manager, &enough);
+
+
+    //
     // verify block difficulty
-    if (! BRMerkleBlockVerifyDifficulty(block, prev, transitionTime)) {
+    if(!enough){
+
+    } else
+    if (! BRMerkleBlockVerifyDifficulty(block, prev, transitionTime, dgwDiff)) {
         peer_log(peer, "relayed block with invalid difficulty target %x, blockHash: %s", block->target,
                  u256_hex_encode(block->blockHash));
         r = 0;
@@ -1962,4 +1964,229 @@ void BRPeerManagerFree(BRPeerManager *manager)
     pthread_mutex_unlock(&manager->lock);
     pthread_mutex_destroy(&manager->lock);
     free(manager);
+}
+
+UInt256 shiftRight(UInt256 a, uint8_t bits);
+UInt256 shiftLeft(UInt256 a, uint8_t bits);
+
+UInt256 setCompact(int32_t nCompact)
+{
+    int nSize = nCompact >> 24;
+    UInt256 nWord = UINT256_ZERO;
+    nWord.u32[0] = nCompact & 0x007fffff;
+    if (nSize <= 3) {
+        nWord = shiftRight(nWord, 8 * (3 - nSize));
+    } else {
+        nWord = shiftLeft(nWord, 8 * (nSize - 3));
+    }
+    return nWord;
+}
+
+uint8_t bits(UInt256 number)
+{
+    for (int pos = 8 - 1; pos >= 0; pos--) {
+        if (number.u32[pos]) {
+            for (int bits = 31; bits > 0; bits--) {
+                if (number.u32[pos] & 1 << bits)
+                    return 32 * pos + bits + 1;
+            }
+            return 32 * pos + 1;
+        }
+    }
+    return 0;
+}
+
+int32_t getCompact(UInt256 number)
+{
+    int nSize = (bits(number) + 7) / 8;
+    uint32_t nCompact = 0;
+    if (nSize <= 3) {
+        nCompact = number.u32[0] << 8 * (3 - nSize);
+    } else {
+        UInt256 bn = shiftRight(number, 8 * (nSize - 3));
+        nCompact = bn.u32[0];
+    }
+    // The 0x00800000 bit denotes the sign.
+    // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
+    if (nCompact & 0x00800000) {
+        nCompact >>= 8;
+        nSize++;
+    }
+    assert((nCompact & ~0x007fffff) == 0);
+    assert(nSize < 256);
+    nCompact |= nSize << 24;
+    return nCompact;
+}
+
+UInt256 add(UInt256 a, UInt256 b) {
+    uint64_t carry = 0;
+    UInt256 r = UINT256_ZERO;
+    for (int i = 0; i < 8; i++) {
+        uint64_t sum = (uint64_t)a.u32[i] + (uint64_t)b.u32[i] + carry;
+        r.u32[i] = (uint32_t)sum;
+        carry = sum >> 32;
+    }
+    return r;
+}
+
+UInt256 addOne(UInt256 a) {
+    UInt256 r = ((UInt256) { .u64 = { 1, 0, 0, 0 } });
+    return add(a, r);
+}
+
+UInt256 neg(UInt256 a) {
+    UInt256 r = UINT256_ZERO;
+    for (int i = 0; i < 4; i++) {
+        r.u64[i] = ~a.u64[i];
+    }
+    return r;
+}
+
+UInt256 subtract(UInt256 a, UInt256 b) {
+    return add(a,addOne(neg(b)));
+}
+
+UInt256 shiftLeft(UInt256 a, uint8_t bits) {
+    UInt256 r = UINT256_ZERO;
+    int k = bits / 64;
+    bits = bits % 64;
+    for (int i = 0; i < 4; i++) {
+        if (i + k + 1 < 4 && bits != 0)
+            r.u64[i + k + 1] |= (a.u64[i] >> (64 - bits));
+        if (i + k < 4)
+            r.u64[i + k] |= (a.u64[i] << bits);
+    }
+    return r;
+}
+
+UInt256 shiftRight(UInt256 a, uint8_t bits) {
+    UInt256 r = UINT256_ZERO;
+    int k = bits / 64;
+    bits = bits % 64;
+    for (int i = 0; i < 4; i++) {
+        if (i - k - 1 >= 0 && bits != 0)
+            r.u64[i - k - 1] |= (a.u64[i] << (64 - bits));
+        if (i - k >= 0)
+            r.u64[i - k] |= (a.u64[i] >> bits);
+    }
+    return r;
+}
+//#define uint256_supeq(a, b) (a.u64[0] > b.u64[0] || (a.u64[0] == b.u64[0]) && (a.u64[1] > b.u64[1] || (a.u64[1] == b.u64[1]) && (a.u64[2] > b.u64[2] || (a.u64[2] == b.u64[2]) && (a.u64[3] >= b.u64[3]))))
+#define uint256_supeq(a, b) (a.u64[3] > b.u64[3] || ((a.u64[3] == b.u64[3]) && (a.u64[2] > b.u64[2] || (a.u64[2] == b.u64[2]) && (a.u64[1] > b.u64[1] || (a.u64[1] == b.u64[1]) && (a.u64[0] >= b.u64[0])))))
+
+UInt256 divide (UInt256 a,UInt256 b)
+{
+    UInt256 div = b;     // make a copy, so we can shift.
+    UInt256 num = a;     // make a copy, so we can subtract.
+    UInt256 r = UINT256_ZERO;                  // the quotient.
+    int num_bits = bits(num);
+    int div_bits = bits(div);
+    assert (div_bits != 0);
+    if (div_bits > num_bits) // the result is certainly 0.
+        return r;
+    int shift = num_bits - div_bits;
+    div = shiftLeft(div, shift); // shift so that div and nun align.
+    while (shift >= 0) {
+        if (uint256_supeq(num,div)) {
+            num = subtract(num,div);
+            r.u32[shift / 32] |= (1 << (shift & 31)); // set a bit of the result.
+        }
+        div = shiftRight(div, 1); // shift back.
+        shift--;
+    }
+    // num now contains the remainder of the division.
+    return r;
+}
+
+UInt256 multiplyThis32 (UInt256 a,uint32_t b)
+{
+    uint64_t carry = 0;
+    for (int i = 0; i < 8; i++) {
+        uint64_t n = carry + (uint64_t)b * (uint64_t)a.u32[i];
+        a.u32[i] = n & 0xffffffff;
+        carry = n >> 32;
+    }
+    return a;
+}
+
+#define MAX_PROOF_OF_WORK 0x1e0fffff
+uint32_t darkGravityWaveTargetWithPreviousBlocks(BRMerkleBlock * self, BRMerkleBlock *_previousBlock, BRPeerManager * manager, int * enough) {
+    /* current difficulty formula, darkcoin - based on DarkGravity v3, original work done by evan duffield, modified for iOS */
+    BRMerkleBlock *previousBlock = _previousBlock;//previousBlocks[uint256_obj(self.prevBlock)];
+
+    int64_t nActualTimespan = 0;
+    int64_t lastBlockTime = 0;
+    uint32_t blockCount = 0;
+    UInt256 sumTargets = UINT256_ZERO;
+    *enough = 1;
+
+    if (UInt256IsZero(_previousBlock->blockHash) || previousBlock->height == 0 || previousBlock->height < DGW_PAST_BLOCKS_MIN) {
+        // This is the first block or the height is < PastBlocksMin
+        // Return minimal required work. (1e0ffff0)
+        return MAX_PROOF_OF_WORK;
+    }
+
+    BRMerkleBlock *currentBlock = previousBlock;
+    // loop over the past n blocks, where n == PastBlocksMax
+    for (blockCount = 1; currentBlock && currentBlock->height > 0 && blockCount<=DGW_PAST_BLOCKS_MAX; blockCount++) {
+
+        // Calculate average difficulty based on the blocks we iterate over in this for loop
+        if(blockCount <= DGW_PAST_BLOCKS_MIN) {
+            UInt256 currentTarget = setCompact(currentBlock->target);
+            //if (self.height == 1070917)
+            //NSLog(@"%d",currentTarget);
+            if (blockCount == 1) {
+                sumTargets = add(currentTarget,currentTarget);
+            } else {
+                sumTargets = add(sumTargets,currentTarget);
+            }
+        }
+
+        // If this is the second iteration (LastBlockTime was set)
+        if(lastBlockTime > 0){
+            // Calculate time difference between previous block and current block
+            int64_t currentBlockTime = currentBlock->timestamp;
+            int64_t diff = ((lastBlockTime) - (currentBlockTime));
+            // Increment the actual timespan
+            nActualTimespan += diff;
+        }
+        // Set lastBlockTime to the block time for the block in current iteration
+        lastBlockTime = currentBlock->timestamp;
+
+        if (previousBlock == NULL) { assert(currentBlock); break; }
+        currentBlock = BRSetGet(manager->blocks, &currentBlock->prevBlock);//previousBlocks[uint256_obj(currentBlock.prevBlock)];
+        if(currentBlock == NULL)
+        {
+            //not enough to calculate
+            *enough = 0;
+            return MAX_PROOF_OF_WORK;
+        }
+
+    }
+    UInt256 blockCount256 = ((UInt256) { .u64 = { blockCount, 0, 0, 0 } });
+    // darkTarget is the difficulty
+    UInt256 darkTarget = divide(sumTargets,blockCount256);
+
+    // nTargetTimespan is the time that the CountBlocks should have taken to be generated.
+    uint32_t nTargetTimespan = (blockCount - 1)* 60*2.5;
+
+    // Limit the re-adjustment to 3x or 0.33x
+    // We don't want to increase/decrease diff too much.
+    if (nActualTimespan < nTargetTimespan/3.0f)
+        nActualTimespan = nTargetTimespan/3.0f;
+    if (nActualTimespan > nTargetTimespan*3.0f)
+        nActualTimespan = nTargetTimespan*3.0f;
+
+    // Calculate the new difficulty based on actual and target timespan.
+    darkTarget = divide(multiplyThis32(darkTarget,nActualTimespan),((UInt256) { .u64 = { nTargetTimespan, 0, 0, 0 } }));
+
+    int32_t compact = getCompact(darkTarget);
+
+    // If calculated difficulty is lower than the minimal diff, set the new difficulty to be the minimal diff.
+    if (compact > MAX_PROOF_OF_WORK){
+        compact = MAX_PROOF_OF_WORK;
+    }
+
+    // Return the new diff.
+    return compact;
 }

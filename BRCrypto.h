@@ -27,10 +27,12 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include "X11/hash.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 // sha-1 - not recommended for cryptographic use
 void BRSHA1(void *md20, const void *data, size_t len);
