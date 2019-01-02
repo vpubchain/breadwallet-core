@@ -64,6 +64,12 @@ static const char *dns_seeds[] = {
 // blockchain checkpoints - these are also used as starting points for partial chain downloads, so they need to be at
 // difficulty transition boundaries in order to verify the block difficulty at the immediately following transition
 static const struct { uint32_t height; const char *hash; uint32_t timestamp; uint32_t target; } checkpoint_array[] = {
+    {      0, "00000d6f81d96969bfa1f195a1e349a6129c720c50a255c50ca38163d8286579", 1543384000, 0x1e0ffff0u },//dash
+    {      1500, "000000f62195e8250bbc878827113eade4d6901bfc32d022708e424eb5c9291e", 1543417277, 0x1e00ffffu },//dash
+    {      4991, "000000a9f0cfbd4784c275bc6797bc26ee16d7e2c0391423a2f0ca5eb028ddee", 1543994925, 0x1e00b0adu },//dash
+    {      9918, "0000004b774d52c03ee471f5e353c6307d896ad75510de37e07d8f5aec10ef88", 1544922876, 0x1e00e824u },//dash
+    {      13230, "00000021250bfeb55e69c89b3c33ecd0ed3400a9d7c9d9d592293f128b05d42b", 1545471680, 0x1e00b659u },//dash
+/*
     {      0, "00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6", 1390095618, 0x1e0ffff0u },//dash
     {   1500, "000000aaf0300f59f49bc3e970bad15c11f961fe2347accffff19d96ec9778e3", 1390109863, 0x1e00ffffu },//dash
     {   4991, "000000003b01809551952460744d5dbb8fcbd6cbae3c220267bf7fa43f837367", 1390271049, 0x1c426980u },//dash
@@ -86,11 +92,13 @@ static const struct { uint32_t height; const char *hash; uint32_t timestamp; uin
     { 246209, "00000000000eec6f7871d3d70321ae98ef1007ab0812d876bda1208afcfb7d7d", 1428046505, 0x1b1a5e27u },//dash
     { 298549, "00000000000cc467fbfcfd49b82e4f9dc8afb0ef83be7c638f573be6a852ba56", 1436306353, 0x1b1ff0dbu },//dash
     { 312645, "0000000000059dcb71ad35a9e40526c44e7aae6c99169a9e7017b7d84b1c2daf", 1438525019, 0x1b1c46ceu }//dash
+    */
 };
 
 static const char *dns_seeds[] = {
-           "dnsseed.masternode.io",             "dnsseed.dashpay.io",
-            "dnsseed.dash.org",            "dnsseed.dashdot.io"
+//           "dnsseed.masternode.io",             "dnsseed.dashpay.io",
+//            "dnsseed.dash.org",            "dnsseed.dashdot.io"
+            "dnsseed1.jiulingo.net",        "dnsseed2.jiulingo.net"
 };
 
 #endif
@@ -1280,12 +1288,12 @@ static void _peerRelayedBlock(void *info, BRMerkleBlock *block)
             manager->lastOrphan = block;
         }
     }
-    else if (! _BRPeerManagerVerifyBlock(manager, block, prev, peer)) { // block is invalid
+    /*else if (! _BRPeerManagerVerifyBlock(manager, block, prev, peer)) { // block is invalid
         peer_log(peer, "relayed invalid block");
         BRMerkleBlockFree(block);
         block = NULL;
         _BRPeerManagerPeerMisbehavin(manager, peer);
-    }
+    }*/
     else if (UInt256Eq(block->prevBlock, manager->lastBlock->blockHash)) { // new block extends main chain
         if ((block->height % 500) == 0 || txCount > 0 || block->height >= BRPeerLastBlock(peer)) {
             peer_log(peer, "adding block #%"PRIu32", false positive rate: %f", block->height, manager->fpRate);
